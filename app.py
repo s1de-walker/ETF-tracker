@@ -44,7 +44,7 @@ if not error_flag:
     st.write("")
 
     # 📊 Factor Selection
-    st.markdown("### Select NSE ETFs")
+    st.markdown("### Select ETFs")
 
     factors = {
         "Quality": "HDFCQUAL.NS",
