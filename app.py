@@ -82,7 +82,8 @@ if not error_flag:
 
     # ✅ **Interactive Plotly Chart**
     if selected_factors:
-
+        st.markdown("### Cumulative Performance")
+        
         fig = go.Figure()
 
         for factor in selected_factors:
@@ -94,9 +95,8 @@ if not error_flag:
                 name=factor,  
                 line=dict(width=2)  
             ))
-
+        
         fig.update_layout(
-            title="ETF Cumulative Performance",
             template="plotly_dark",  # ✅ Dark Mode
             hovermode="x unified",  # ✅ Shows all values when hovering
             legend=dict(title="Factors", bgcolor="rgba(0,0,0,0.5)"),  # Semi-transparent legend
