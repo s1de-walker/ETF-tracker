@@ -83,7 +83,6 @@ if not error_flag:
 
     # ✅ **Interactive Plotly Chart**
     if selected_factors:
-        st.subheader("Cumulative Performance")
 
         fig = go.Figure()
 
