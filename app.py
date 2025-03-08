@@ -11,7 +11,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 # Streamlit UI
 st.title("ETF Tracker")
-st.write("")
+st.divider()
 # 🗓️ Date Selection (Side-by-side)
 st.markdown("### Select Time Period for Analysis")
 
