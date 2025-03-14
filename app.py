@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+import plotly.express as px
 
 # Streamlit UI
 st.title("ETF Tracker")
@@ -134,6 +135,44 @@ if not error_flag:
     st.write("")
     
     st.dataframe(filtered_summary_stats.T.style.format("{:.1f}"))
+
+
+    # SCATTER PLOT
+    # Add user inputs for scatter plot selection
+    st.markdown("### Scatter Plot: Compare Two Metrics")
+    metric_1 = st.selectbox("Select Metric 1", summary_stats.index, index=0)
+    metric_2 = st.selectbox("Select Metric 2", summary_stats.index, index=1)
+    
+    # Get values for the selected metrics
+    x_values = filtered_summary_stats.loc[metric_1].values
+    y_values = filtered_summary_stats.loc[metric_2].values
+    
+    # Custom color mapping (e.g., based on 'Sharpe Ratio')
+    color_metric = st.selectbox("Select Metric for Colors", ["Sharpe Ratio", "Total Return (%)", "Annualized Volatility (%)", "VaR 95 (%)", "Beta (vs N50)"], index=0)
+    colors = filtered_summary_stats.loc[color_metric].values
+    
+    # Create a Plotly scatter plot
+    fig = px.scatter(
+        x=x_values, 
+        y=y_values, 
+        text=filtered_summary_stats.columns,  # ETF names as hover text
+        color=colors,  # Use the selected metric to color the dots
+        color_continuous_scale='Viridis',  # Customize color scale
+        labels={metric_1: metric_1, metric_2: metric_2},  # Axis labels
+        title=f"Scatter Plot: {metric_1} vs {metric_2}",
+    )
+    
+    # Update layout for better aesthetics
+    fig.update_layout(
+        template="plotly_dark",  # Dark mode
+        xaxis_title=metric_1,
+        yaxis_title=metric_2,
+        legend_title=color_metric,
+        showlegend=True,
+        height=500
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
     st.write("")
     
