@@ -1,3 +1,4 @@
+#%%writefile app.py
 
 import yfinance as yf
 import pandas as pd
@@ -12,7 +13,7 @@ from matplotlib.colors import LinearSegmentedColormap
 # Streamlit UI
 st.title("ETF Tracker")
 st.divider()
-# 🗓️ Date Selection (Side-by-side)
+# 📃 Date Selection (Side-by-side)
 st.markdown("### Select Time Period for Analysis")
 
 col1, col2 = st.columns(2)
@@ -42,64 +43,44 @@ if not error_flag:
     st.write("")
     st.write("")
 
-    # 📊 Factor Selection
+    # 📊 ETF Selection
     st.markdown("### Select ETFs")
 
-    factors = {
-        "Quality": "HDFCQUAL.NS",
-        "LowVolt": "LOWVOLIETF.NS",
-        "Momntm": "MOMOMENTUM.NS",
-        "Size": "SMALLCAP.NS",
-        "NIFTY50": "NIFTYBEES.NS",
-        "Bank": "BANKBEES.NS",
-        "SP50": "MASPTOP50.NS",
-        "N100": "MON100.NS",
-        "MAFANG": "MAFANG.NS",
-        "GOLD": "GOLDBEES.NS",
-        "VYM": "VYM",
-        "BBUS": "BBUS",
-        "IYF":"IYF",
-        "VTI":"VTI",
-        "JGRO":"JGRO",
-        "MTUM":"MTUM",
-        "QUAL":"QUAL",
-        "JCTR":"JCTR",
-        "SPY":"SPY",
-        "VOO":"VOO",
-        "USMV":"USMV"
-    }
+    tickers = [
+        "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "SMALLCAP.NS", "NIFTYBEES.NS", 
+        "BANKBEES.NS", "MASPTOP50.NS", "MON100.NS", "MAFANG.NS", "GOLDBEES.NS", 
+        "VYM", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY", "VOO", "USMV"
+    ]
 
-    default_factors = ["SP50", "NIFTY50", "GOLD", "Quality","LowVolt", "Momntm","VOO"]
-    selected_factors = st.multiselect("Choose factors:", factors.keys(), default=default_factors)
+    default_tickers = ["MASPTOP50.NS", "NIFTYBEES.NS", "GOLDBEES.NS", "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS"]
+    selected_tickers = st.multiselect("Choose ETFs:", tickers, default=default_tickers)
 
     st.divider()
 
-    tickers = [factors[f] for f in selected_factors]
-    data = yf.download(tickers, start=start_date, end=end_date)['Close']
+    data = yf.download(selected_tickers, start=start_date, end=end_date)['Close']
 
     # Calculate compounded returns
     returns = data.pct_change().add(1).cumprod() - 1
 
     # ✅ **Interactive Plotly Chart**
-    if selected_factors:
+    if selected_tickers:
         st.markdown("### Cumulative Performance")
         
         fig = go.Figure()
 
-        for factor in selected_factors:
-            ticker = factors[factor]
+        for ticker in selected_tickers:
             fig.add_trace(go.Scatter(
                 x=returns.index, 
                 y=returns[ticker], 
                 mode="lines",
-                name=factor,  
+                name=ticker,  
                 line=dict(width=2)  
             ))
         
         fig.update_layout(
             template="plotly_dark",  # ✅ Dark Mode
             hovermode="x unified",  # ✅ Shows all values when hovering
-            legend=dict(title="Factors", bgcolor="rgba(0,0,0,0.5)"),  # Semi-transparent legend
+            legend=dict(title="ETFs", bgcolor="rgba(0,0,0,0.5)"),  # Semi-transparent legend
             margin=dict(l=40, r=40, t=40, b=40),
             height=500
         )
@@ -110,12 +91,12 @@ if not error_flag:
     daily_returns = data.pct_change()
     cov_matrix = daily_returns.cov()
 
-    if "NIFTY50" in selected_factors:
-        cov_with_n50 = cov_matrix.loc[tickers, "NIFTYBEES.NS"]
+    if "NIFTYBEES.NS" in selected_tickers:
+        cov_with_n50 = cov_matrix.loc[selected_tickers, "NIFTYBEES.NS"]
         n50_variance = daily_returns["NIFTYBEES.NS"].var()
         beta_vs_n50 = cov_with_n50 / n50_variance
     else:
-        beta_vs_n50 = pd.Series(index=tickers, dtype="float64")
+        beta_vs_n50 = pd.Series(index=selected_tickers, dtype="float64")
 
     summary_stats = pd.DataFrame({
         "Total Return (%)": returns.iloc[-1] * 100,
@@ -125,10 +106,7 @@ if not error_flag:
         "Beta (vs N50)": beta_vs_n50
     }).T
 
-    filtered_summary_stats = summary_stats[tickers]
-
-    # Display Metrics in Columns
-    reverse_factors = {v: k for k, v in factors.items()}
+    filtered_summary_stats = summary_stats[selected_tickers]
 
     if not filtered_summary_stats.empty:
         st.subheader("ETF Summary")
@@ -144,34 +122,23 @@ if not error_flag:
 
         col1, col2, col3 = st.columns(3)
 
-        col1.metric("🚀 Highest Return ETF", f"{reverse_factors.get(best_performer, best_performer)}", f"{best_performer_value:.0f}%")
-        col2.metric("⚡ Most Volatile ETF", f"{reverse_factors.get(most_volatile, most_volatile)}", f"{most_volatile_value:.0f}%")
-        col3.metric("🎯 Best Sharpe Ratio", f"{reverse_factors.get(best_sharpe, best_sharpe)}", f"{best_sharpe_value:.1f}")
-
-    st.write("")
-
-    # Rename index in summary statistics from tickers to ETF names
-    etf_names = {v: k for k, v in factors.items()}
-    filtered_summary_stats = filtered_summary_stats.rename(columns=etf_names)
-
-    # Display summary DataFrame
-    st.dataframe(filtered_summary_stats.T.style.format("{:.1f}"))
-
-    st.write("")
+        col1.metric("🚀 Highest Return ETF", best_performer, f"{best_performer_value:.0f}%")
+        col2.metric("⚡ Most Volatile ETF", most_volatile, f"{most_volatile_value:.0f}%")
+        col3.metric("🎯 Best Sharpe Ratio", best_sharpe, f"{best_sharpe_value:.1f}")
+        
     st.write("")
     st.write("")
     
+    st.dataframe(filtered_summary_stats.T.style.format("{:.1f}"))
+
+    st.write("")
+    
     # Display correlation matrix
-    # Heatmap for Factor Correlations
     st.subheader("ETF Correlation")
 
-    # Create a custom diverging color palette
-    # Create a custom diverging color map
     colors = ["#1b3368", "white", "#7c2f57"]
     cmap = LinearSegmentedColormap.from_list("custom_cmap", colors)
    
-    correlation_matrix = returns[[factors[f] for f in selected_factors]].corr().round(2)
-    correlation_matrix = correlation_matrix.rename(index=etf_names, columns=etf_names)
+    correlation_matrix = returns[selected_tickers].corr().round(2)
 
     st.dataframe(correlation_matrix.style.format("{:.2f}").background_gradient(cmap=cmap, axis=None, vmin=-1, vmax=1))
-
