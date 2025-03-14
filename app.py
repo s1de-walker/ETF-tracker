@@ -156,7 +156,7 @@ if not error_flag:
     x_values = filtered_summary_stats.loc[metric_1].values
     y_values = filtered_summary_stats.loc[metric_2].values
 
-    custom_color = '#FF5733' 
+    custom_color = '#7c2f57' 
     
     # Create a Plotly scatter plot without axis labels and without ETF names on the plot
     fig = px.scatter(
