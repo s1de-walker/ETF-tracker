@@ -177,7 +177,7 @@ if not error_flag:
     # Apply the custom color for all dots
     fig.update_traces(
         marker=dict(
-            size=10,                # Size of the dots
+            size=25,                # Size of the dots
             color=custom_color,     # Apply custom color (one color for all dots)
         ),
         hovertemplate='%{text}',     # Show the ETF name on hover
