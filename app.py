@@ -109,6 +109,9 @@ if not error_flag:
 
     filtered_summary_stats = summary_stats[selected_tickers]
 
+    st.write("")
+    st.write("")
+
     if not filtered_summary_stats.empty:
         st.subheader("ETF Summary")
 
