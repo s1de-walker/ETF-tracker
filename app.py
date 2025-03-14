@@ -147,17 +147,11 @@ if not error_flag:
     x_values = filtered_summary_stats.loc[metric_1].values
     y_values = filtered_summary_stats.loc[metric_2].values
     
-    # Custom color mapping (e.g., based on 'Sharpe Ratio')
-    color_metric = st.selectbox("Select Metric for Colors", ["Sharpe Ratio", "Total Return (%)", "Annualized Volatility (%)", "VaR 95 (%)", "Beta (vs N50)"], index=0)
-    colors = filtered_summary_stats.loc[color_metric].values
-    
-    # Create a Plotly scatter plot
+    # Create a Plotly scatter plot without colors
     fig = px.scatter(
         x=x_values, 
         y=y_values, 
         text=filtered_summary_stats.columns,  # ETF names as hover text
-        color=colors,  # Use the selected metric to color the dots
-        color_continuous_scale='Viridis',  # Customize color scale
         labels={metric_1: metric_1, metric_2: metric_2},  # Axis labels
         title=f"Scatter Plot: {metric_1} vs {metric_2}",
     )
@@ -167,13 +161,10 @@ if not error_flag:
         template="plotly_dark",  # Dark mode
         xaxis_title=metric_1,
         yaxis_title=metric_2,
-        legend_title=color_metric,
-        showlegend=True,
         height=500
     )
     
     st.plotly_chart(fig, use_container_width=True)
-
     st.write("")
     
     # Display correlation matrix
