@@ -154,10 +154,10 @@ if not error_flag:
         metrics = summary_stats.index  # Get the index of summary_stats as a list of metric names
         
         with col1:
-            metric_1 = st.selectbox("Select Metric 1", metrics, index=0)
+            metric_1 = st.selectbox("Select Metric 1 (x)", metrics, index=0)
         
         with col2:
-            metric_2 = st.selectbox("Select Metric 2", metrics, index=1)
+            metric_2 = st.selectbox("Select Metric 2 (y)", metrics, index=1)
         
         # Get values for the selected metrics
         x_values = filtered_summary_stats.loc[metric_1].values
