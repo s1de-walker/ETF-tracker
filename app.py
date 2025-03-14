@@ -150,7 +150,7 @@ if not error_flag:
         metric_1 = st.selectbox("Select Metric 1", metrics, index=0)
     
     with col2:
-        metric_2 = st.selectbox("Select Metric 2", [m for m in metrics if m != metric_1], index=0)
+        metric_2 = st.selectbox("Select Metric 2", metrics, index=1)
     
     # Get values for the selected metrics
     x_values = filtered_summary_stats.loc[metric_1].values
