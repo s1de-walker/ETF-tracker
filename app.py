@@ -154,11 +154,10 @@ if not error_flag:
     x_values = filtered_summary_stats.loc[metric_1].values
     y_values = filtered_summary_stats.loc[metric_2].values
     
-    # Create a Plotly scatter plot without axis labels but with hover text
+    # Create a Plotly scatter plot without axis labels and without ETF names on the plot
     fig = px.scatter(
         x=x_values, 
         y=y_values, 
-        text=filtered_summary_stats.columns,  # ETF names as hover text
         title=f"Scatter Plot: {metric_1} vs {metric_2}",
     )
     
@@ -168,13 +167,15 @@ if not error_flag:
         xaxis_title='',  # No x-axis label
         yaxis_title='',  # No y-axis label
         height=500,
-        hovermode="closest",  # Show text when hovering close to a point
-        xaxis=dict(showticklabels=False),  # Hide x-axis tick labels
-        yaxis=dict(showticklabels=False),  # Hide y-axis tick labels
+        hovermode="closest",  # Show hover text when hovering close to a point
     )
+    
+    # Add hover text to show the ETF names only on hover
+    fig.update_traces(marker=dict(size=10), hovertemplate='%{text}', text=filtered_summary_stats.columns)
     
     # Show the plot
     st.plotly_chart(fig, use_container_width=True)
+
 
 
     st.write("")
