@@ -143,9 +143,11 @@ if not error_flag:
     # Add user inputs for scatter plot selection in two columns
     st.markdown("### Scatter Plot: Compare Two Metrics")
     col1, col2 = st.columns(2)
+    # Assuming summary_stats is already defined and contains the metrics
+    metrics = summary_stats.index  # Get the index of summary_stats as a list of metric names
     
     with col1:
-        metric_1 = st.selectbox("Select Metric 1", summary_stats.index, index=0)
+        metric_1 = st.selectbox("Select Metric 1", metrics, index=0)
     
     with col2:
         metric_2 = st.selectbox("Select Metric 2", [m for m in metrics if m != metric_1], index=1)
