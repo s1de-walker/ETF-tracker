@@ -155,6 +155,8 @@ if not error_flag:
     # Get values for the selected metrics
     x_values = filtered_summary_stats.loc[metric_1].values
     y_values = filtered_summary_stats.loc[metric_2].values
+
+    custom_color = '#FF5733' 
     
     # Create a Plotly scatter plot without axis labels and without ETF names on the plot
     fig = px.scatter(
@@ -172,13 +174,18 @@ if not error_flag:
         hovermode="closest",  # Show hover text when hovering close to a point
     )
     
-    # Add hover text to show the ETF names only on hover
-    fig.update_traces(marker=dict(size=10), hovertemplate='%{text}', text=filtered_summary_stats.columns)
+    # Apply the custom color for all dots
+    fig.update_traces(
+        marker=dict(
+            size=10,                # Size of the dots
+            color=custom_color,     # Apply custom color (one color for all dots)
+        ),
+        hovertemplate='%{text}',     # Show the ETF name on hover
+        text=filtered_summary_stats.columns   # Text to display on hover
+    )
     
     # Show the plot
     st.plotly_chart(fig, use_container_width=True)
-
-
 
     st.write("")
     
