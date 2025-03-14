@@ -139,7 +139,7 @@ if not error_flag:
 
     # SCATTER PLOT
     #import plotly.express as px
-    
+
     # Add user inputs for scatter plot selection in two columns
     st.markdown("### Scatter Plot: Compare Two Metrics")
     col1, col2 = st.columns(2)
@@ -162,17 +162,20 @@ if not error_flag:
         title=f"Scatter Plot: {metric_1} vs {metric_2}",
     )
     
-    # Update layout for better aesthetics
+    # Update layout for better aesthetics, including removing axis labels
     fig.update_layout(
         template="plotly_dark",  # Dark mode
         xaxis_title='',  # No x-axis label
         yaxis_title='',  # No y-axis label
         height=500,
         hovermode="closest",  # Show text when hovering close to a point
+        xaxis=dict(showticklabels=False),  # Hide x-axis tick labels
+        yaxis=dict(showticklabels=False),  # Hide y-axis tick labels
     )
     
     # Show the plot
     st.plotly_chart(fig, use_container_width=True)
+
 
     st.write("")
     
