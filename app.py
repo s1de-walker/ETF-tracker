@@ -48,7 +48,7 @@ if not error_flag:
 
     tickers = [
         "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "SMALLCAP.NS", "NIFTYBEES.NS", 
-        "BANKBEES.NS", "MASPTOP50.NS", "MON100.NS", "MAFANG.NS", "GOLDBEES.NS", 
+        "BANKBEES.NS", "MASPTOP50.NS", "MON100.NS", "MAFANG.NS", "GOLDBEES.NS", "GOLDCASE.NS",
         "VYM", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY", "VOO", "USMV"
     ]
 
