@@ -47,9 +47,9 @@ if not error_flag:
     st.markdown("### Select ETFs")
 
     tickers = [
-        "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "SMALLCAP.NS", "NIFTYBEES.NS", 
+        "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "SMALLCAP.NS", "NIFTYBEES.NS", "TOP100CASE.NS",
         "BANKBEES.NS", "MASPTOP50.NS", "MON100.NS", "MAFANG.NS", "GOLDBEES.NS", "SILVERETF.NS", "MNC.NS", "CONS.NS",
-        "HEALTHIETF.NS", 
+        "HEALTHIETF.NS", "LTGILTBEES.NS", "CPSEETF.NS,
         "VYM", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY", "VOO", "USMV"
     ]
 
