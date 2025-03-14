@@ -138,33 +138,42 @@ if not error_flag:
 
 
     # SCATTER PLOT
-    # Add user inputs for scatter plot selection
+    #import plotly.express as px
+    
+    # Add user inputs for scatter plot selection in two columns
     st.markdown("### Scatter Plot: Compare Two Metrics")
-    metric_1 = st.selectbox("Select Metric 1", summary_stats.index, index=0)
-    metric_2 = st.selectbox("Select Metric 2", summary_stats.index, index=1)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        metric_1 = st.selectbox("Select Metric 1", summary_stats.index, index=0)
+    
+    with col2:
+        metric_2 = st.selectbox("Select Metric 2", summary_stats.index, index=1)
     
     # Get values for the selected metrics
     x_values = filtered_summary_stats.loc[metric_1].values
     y_values = filtered_summary_stats.loc[metric_2].values
     
-    # Create a Plotly scatter plot without colors
+    # Create a Plotly scatter plot without axis labels but with hover text
     fig = px.scatter(
         x=x_values, 
         y=y_values, 
         text=filtered_summary_stats.columns,  # ETF names as hover text
-        labels={metric_1: metric_1, metric_2: metric_2},  # Axis labels
         title=f"Scatter Plot: {metric_1} vs {metric_2}",
     )
     
     # Update layout for better aesthetics
     fig.update_layout(
         template="plotly_dark",  # Dark mode
-        xaxis_title=metric_1,
-        yaxis_title=metric_2,
-        height=500
+        xaxis_title='',  # No x-axis label
+        yaxis_title='',  # No y-axis label
+        height=500,
+        hovermode="closest",  # Show text when hovering close to a point
     )
     
+    # Show the plot
     st.plotly_chart(fig, use_container_width=True)
+
     st.write("")
     
     # Display correlation matrix
