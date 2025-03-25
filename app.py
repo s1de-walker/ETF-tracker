@@ -66,7 +66,7 @@ if not error_flag:
 
     if not error_flag:
 
-        data = yf.download(selected_tickers, start=start_date, end=end_date)['Close']
+        data = yf.download(selected_tickers, start=start_date, end=end_date + timedelta(days=1))['Close']
     
         # Calculate compounded returns
         returns = data.pct_change().add(1).cumprod() - 1
