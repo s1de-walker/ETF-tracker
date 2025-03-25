@@ -17,13 +17,15 @@ st.divider()
 # 📃 Date Selection (Side-by-side)
 st.markdown("### Select Time Period for Analysis")
 
+default_end = datetime.now().strftime('%Y-%m-%d')
+
 col1, col2 = st.columns(2)
 
 with col1:
     start_date = st.date_input("Start Date", datetime.today() - timedelta(days=365))
 
 with col2:
-    end_date = st.date_input("End Date", datetime.today())
+    end_date = st.date_input("End Date", default_end)
 
 # **Validation Checks**
 error_flag = False  
@@ -38,9 +40,10 @@ if start_date > datetime.today().date() or end_date > datetime.today().date():
 
 # **Run only if there are no errors**
 if not error_flag:
+    # Convert dates to string format for yfinance
     start_date = start_date.strftime('%Y-%m-%d')
-    end_date = end_date.strftime('%Y-%m-%d')
-
+    end_date = (end_date + timedelta(days=1)).strftime('%Y-%m-%d')
+    
     st.write("")
     st.write("")
 
@@ -66,7 +69,7 @@ if not error_flag:
 
     if not error_flag:
 
-        data = yf.download(selected_tickers, start=start_date, end=end_date + timedelta(days=1))['Close']
+        data = yf.download(selected_tickers, start=start_date, end=end_date)['Close']
     
         # Calculate compounded returns
         returns = data.pct_change().add(1).cumprod() - 1
