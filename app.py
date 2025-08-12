@@ -54,10 +54,10 @@ if not error_flag:
         "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "HDFCGROWTH.NS", "MOVALUE.NS", "SMALLCAP.NS", "MIDCAPETF.NS", "TOP100CASE.NS", "ALPHA.NS", "AONETOTAL.NS", "MULTICAP.NS"
         "MNC.NS", "CONS.NS", "ITIETF.NS", "FMCGIETF.NS", "OILIETF.NS", "HEALTHIETF.NS", "EVINDIA.NS", "METAL.NS", "AUTOIETF.NS", "MOREALTY.NS", 
         "DIVOPPBEES.NS", "LTGILTBEES.NS", "GSEC5IETF.NS", "CPSEETF.NS", "MAKEINDIA.NS", "LIQUIDCASE.NS", "LIQUIDBEES.NS",
-        "VYM", "SCHD", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY", "VOO", "USMV"
+        "VYM", "SCHD", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY", "VOO", "USMV", "FEZ", "BBEU"
     ]
 
-    default_tickers = ["MASPTOP50.NS", "NIFTYBEES.NS", "GOLDBEES.NS", "HDFCQUAL.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS"]
+    default_tickers = ["MASPTOP50.NS", "NIFTYBEES.NS", "GOLDBEES.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "MON100.NS"]
     selected_tickers = st.multiselect("Choose ETFs:", tickers, default=default_tickers)
 
     # **Check if no ETFs are selected**
@@ -208,3 +208,4 @@ if not error_flag:
         correlation_matrix = returns[selected_tickers].corr().round(2)
     
         st.dataframe(correlation_matrix.style.format("{:.2f}").background_gradient(cmap=cmap, axis=None, vmin=-1, vmax=1))
+
