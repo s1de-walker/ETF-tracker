@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import plotly.express as px
 
+# ✅ Make the app widescreen
+st.set_page_config(layout="wide")
+
 # Streamlit UI
 st.title("ETF Tracker")
 st.divider()
@@ -208,4 +211,5 @@ if not error_flag:
         correlation_matrix = returns[selected_tickers].corr().round(2)
     
         st.dataframe(correlation_matrix.style.format("{:.2f}").background_gradient(cmap=cmap, axis=None, vmin=-1, vmax=1))
+
 
