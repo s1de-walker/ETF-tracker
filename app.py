@@ -23,10 +23,13 @@ st.caption("Track your ETFs")
 
 st.divider()
 
-# 📃 Date Selection (Side-by-side)
-st.markdown("### Select Time Period for Analysis")
+
+left_col, right_col = st.columns([1, 1])
+
 
 with left_col:
+    # 📃 Date Selection (Side-by-side)
+    st.markdown("### Select Time Period for Analysis")
     default_end = datetime.now().strftime('%Y-%m-%d')
     
     col1, col2 = st.columns(2)
@@ -221,5 +224,6 @@ with left_col:
 
 with right_col:
     st.write("")  # blank for now
+
 
 
