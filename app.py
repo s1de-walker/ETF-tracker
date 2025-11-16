@@ -166,7 +166,7 @@ with left_col:
         
             # SCATTER PLOT
             #import plotly.express as px
-        
+            st.write("")
             # Add user inputs for scatter plot selection in two columns
             st.markdown("### Scatter Plot: Compare Two Metrics")
             col1, col2 = st.columns(2)
@@ -228,6 +228,7 @@ with left_col:
 
 with right_col:
     st.write("")  # blank for now
+
 
 
 
