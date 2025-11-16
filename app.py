@@ -1,3 +1,4 @@
+
 #%%writefile app.py
 
 import yfinance as yf
@@ -19,7 +20,9 @@ left_col, right_col = st.columns([1, 1])
 # Streamlit UI
 st.title("ETF Tracker")
 st.caption("Track your ETFs")
+
 st.divider()
+
 # 📃 Date Selection (Side-by-side)
 st.markdown("### Select Time Period for Analysis")
 
@@ -218,4 +221,5 @@ with left_col:
 
 with right_col:
     st.write("")  # blank for now
+
 
