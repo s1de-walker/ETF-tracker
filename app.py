@@ -14,7 +14,7 @@ import plotly.express as px
 # ✅ Make the app widescreen
 st.set_page_config(layout="wide")
 
-left_col, right_col = st.columns([3, 1])
+left_col, right_col = st.columns([1, 1])
 
 # Streamlit UI
 st.title("ETF Tracker")
@@ -218,3 +218,4 @@ with left_col:
 
 with right_col:
     st.write("")  # blank for now
+
