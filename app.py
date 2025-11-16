@@ -39,7 +39,11 @@ with left_col:
     
     with col2:
         end_date = st.date_input("End Date", default_end)
-    
+        
+    # 📌 Show selected time period in months
+    days_diff = (end_date - start_date).days
+    months_diff = days_diff / 30
+    st.caption(f"Selected Period: **{months_diff:.1f} months**")
     # **Validation Checks**
     error_flag = False  
     
@@ -224,6 +228,7 @@ with left_col:
 
 with right_col:
     st.write("")  # blank for now
+
 
 
 
