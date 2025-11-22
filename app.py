@@ -268,31 +268,58 @@ with left_col:
     # =============================
     selected_etf = selected_etf if 'selected_etf' in globals() else prices.columns[0]
     
-    st.subheader("ETF Summary")
+    # ===========================================
+    #    LEADERBOARD SUMMARY (Restored Original)
+    # ===========================================
+
+    st.subheader("ETF Summary (Across Selected ETFs)")
     
-    # --- Ensure returns exist before summary metrics ---
     try:
         returns = prices.pct_change().dropna()
     
-        latest_ret = (returns.iloc[-1] * 100).round(2).astype(str) + "%"
-        vol = (returns.std() * (252**0.5) * 100).round(2).astype(str) + "%"
-        sharpe = ((returns.mean() / returns.std()) * (252**0.5)).round(2).astype(str)
+        # Annualized stats
+        ann_returns = returns.mean() * 252
+        ann_vol = returns.std() * (252 ** 0.5)
+        sharpe = ann_returns / ann_vol
+    
+        # Identify leaders
+        best_return_etf = ann_returns.idxmax()
+        best_vol_etf = ann_vol.idxmax()
+        best_sharpe_etf = sharpe.idxmax()
+    
+        # Format display values
+        best_ret_val = f"{(ann_returns.max() * 100):.2f}%"
+        best_vol_val = f"{(ann_vol.max() * 100):.2f}%"
+        best_sharpe_val = f"{sharpe.max():.2f}"
     
         col1, col2, col3 = st.columns(3)
     
         with col1:
-            st.metric("Daily Return (Last Obs)", latest_ret[selected_etf])
+            st.metric(
+                label="Highest Annualized Return",
+                value=f"{best_return_etf}",
+                delta=best_ret_val
+            )
     
         with col2:
-            st.metric("Annualized Volatility", vol[selected_etf])
+            st.metric(
+                label="Most Volatile ETF",
+                value=f"{best_vol_etf}",
+                delta=best_vol_val
+            )
     
         with col3:
-            st.metric("Sharpe Ratio", sharpe[selected_etf])
+            st.metric(
+                label="Best Sharpe Ratio",
+                value=f"{best_sharpe_etf}",
+                delta=best_sharpe_val
+            )
     
     except Exception as e:
         st.error(f"Error computing summary metrics: {e}")
     
     st.divider()
+
     
     
     # =============================
@@ -472,6 +499,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
