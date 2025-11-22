@@ -150,8 +150,8 @@ def compute_metrics_table(price_df, nifty_series):
 
 
 # TITLE
-st.title("ETF Tracker — Metrics & Factors")
-st.caption("Left: user-selected ETFs and metrics. Right: fixed factor panel.")
+st.title("ETF Tracker")
+st.caption("Track ETFs + research and analysis")
 st.divider()
 
 
@@ -494,6 +494,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
