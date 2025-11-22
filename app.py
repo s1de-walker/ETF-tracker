@@ -258,6 +258,49 @@ with left_col:
 
     st.divider()
 
+    # -------------------------------------------
+    # 🔥 TOP 3 METRICS SUMMARY (ORIGINAL STYLE)
+    # -------------------------------------------
+    
+    st.subheader("ETF Summary")
+    
+    try:
+        # Highest Annualized Return
+        best_return_etf = metrics_table.loc["Annualized Return (%)"].idxmax()
+        best_return_val = metrics_table.loc["Annualized Return (%)", best_return_etf]
+    
+        # Most Volatile (Annualized Volatility)
+        most_vol_etf = metrics_table.loc["Annualized Volatility (%)"].idxmax()
+        most_vol_val = metrics_table.loc["Annualized Volatility (%)", most_vol_etf]
+    
+        # Best Sharpe Ratio
+        best_sharpe_etf = metrics_table.loc["Sharpe Ratio"].idxmax()
+        best_sharpe_val = metrics_table.loc["Sharpe Ratio", best_sharpe_etf]
+    
+        # 3-column metric layout
+        c1, c2, c3 = st.columns(3)
+    
+        c1.metric(
+            label="🚀 Highest Return ETF",
+            value=best_return_etf,
+            delta=f"{best_return_val:.1f}%",
+        )
+    
+        c2.metric(
+            label="⚡ Most Volatile ETF",
+            value=most_vol_etf,
+            delta=f"{most_vol_val:.1f}%",
+        )
+    
+        c3.metric(
+            label="🎯 Best Sharpe Ratio",
+            value=best_sharpe_etf,
+            delta=f"{best_sharpe_val:.2f}",
+        )
+    
+    except Exception as e:
+        st.error(f"Error computing summary metrics: {e}")
+
     # --- Summary stats table (metrics) ---
     st.markdown("### Summary Statistics (metrics used for scatter & heatmap)")
     metrics_table = compute_metrics_table(prices, nifty_series=(nifty_prices.iloc[:,0] if not nifty_prices.empty else None))
@@ -419,6 +462,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
