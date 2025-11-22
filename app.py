@@ -263,40 +263,36 @@ with left_col:
     st.divider()
 
     # --- Correlation heatmap of the metrics (original colors & heatmap feel) ---
-    st.markdown("### Correlation Heatmap (metrics)")
-    if not metrics_table.empty:
-        # metrics_table rows = metrics, columns = tickers. We want correlation across tickers for each metric,
-        # but the user asked heatmap of the metrics — we will compute correlation across tickers using the metric values.
-        # Make a matrix of correlation between tickers based on metric vectors (so the heatmap shows ticker vs ticker correlation).
-        # But they wanted heatmap of metrics; the original request earlier suggested heatmap of returns correlation.
-        # Here: we'll produce a metric-correlation heatmap where each cell = correlation between two tickers across the metrics.
-        # First transpose so rows=tickers, cols=metrics
-        df_metrics_t = metrics_table.T  # rows = tickers, cols = metrics
-        # Compute correlation between tickers across metrics
-        corr_matrix = df_metrics_t.corr(method='pearson')  # correlation across metric names
-        # But typically heatmap desired is ticker vs ticker correlation of returns (we'll provide both)
-        # Primary: show correlation of tickers based on returns (like original)
-        try:
-            returns = prices.pct_change().dropna()
-            returns_corr = returns.corr().round(2)
-            heatmap_df = returns_corr
-            heatmap_title = "Returns Correlation (tickers)"
-        except Exception:
-            heatmap_df = df_metrics_t.T.corr().round(2)
-            heatmap_title = "Metrics Correlation"
+    st.subheader("ETF Correlation (Dark Mode)")
 
-        # custom colormap: blue-white-maroon similar to earlier
-        colors = ["#1b3368", "white", "#7c2f57"]
-        cmap = LinearSegmentedColormap.from_list("custom_cmap", colors)
+    try:
+        corr = returns[selected_tickers].corr().round(2)
+    
+        fig = px.imshow(
+            corr,
+            text_auto=True,
+            color_continuous_scale=["#1b3368", "black", "#7c2f57"],  # same color theme as before
+            aspect="auto",
+        )
+    
+        fig.update_layout(
+            template="plotly_dark",
+            margin=dict(l=50, r=50, t=50, b=50),
+            coloraxis_colorbar=dict(title="Corr"),
+        )
+    
+        fig.update_xaxes(side="top")
+    
+        st.plotly_chart(fig, use_container_width=True)
+    
+    except Exception as e:
+        st.error(f"Error creating correlation heatmap: {e}")
+    
+    
+    
 
-        fig, ax = plt.subplots(figsize=(6, 5))
-        sns.heatmap(heatmap_df, annot=True, fmt=".2f", cmap=cmap, vmin=-1, vmax=1, ax=ax, cbar_kws={"shrink": .8})
-        ax.set_title(heatmap_title)
-        plt.tight_layout()
-        st.pyplot(fig)
-    else:
-        st.info("Not enough metrics data to draw heatmap.")
 
+    
     st.subheader("Scatter Plot: Compare Metrics")
 
     try:
@@ -411,6 +407,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
