@@ -266,12 +266,15 @@ with left_col:
     st.subheader("ETF Correlation (Dark Mode)")
 
     try:
-        corr = returns[selected_tickers].corr().round(2)
+        # Ensure daily returns exist
+        daily_returns = prices.pct_change().dropna()
+    
+        corr = daily_returns.corr().round(2)
     
         fig = px.imshow(
             corr,
             text_auto=True,
-            color_continuous_scale=["#1b3368", "black", "#7c2f57"],  # same color theme as before
+            color_continuous_scale=["#1b3368", "black", "#7c2f57"],
             aspect="auto",
         )
     
@@ -287,6 +290,7 @@ with left_col:
     
     except Exception as e:
         st.error(f"Error creating correlation heatmap: {e}")
+
     
     
     
@@ -407,6 +411,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
