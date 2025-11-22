@@ -300,38 +300,41 @@ with left_col:
     st.subheader("Scatter Plot: Compare Metrics")
 
     try:
-        # Extract metrics from the metrics table
+        # Prepare metrics dataframe for scatter use
         df_scatter = metrics_table.T.copy()
-    
-        # Convert index to normal column
         df_scatter["ETF"] = df_scatter.index
     
-        # Select only numeric metric columns
-        numeric_cols = df_scatter.select_dtypes(include=['float', 'int']).columns.tolist()
+        # Identify numeric metrics available
+        numeric_metrics = df_scatter.select_dtypes(include=["float", "int"]).columns.tolist()
     
-        # Require at least 2 numeric metrics
-        if len(numeric_cols) < 2:
+        # Remove ETF column if detected
+        if "ETF" in numeric_metrics:
+            numeric_metrics.remove("ETF")
+    
+        if len(numeric_metrics) < 2:
             st.warning("Not enough numeric metrics available to generate scatter plot.")
         else:
-            # Drop rows where all selected numeric metrics are NaN
-            df_scatter_clean = df_scatter.dropna(subset=numeric_cols, how='all')
+            # Metric selectors (X / Y axis)
+            col1, col2 = st.columns(2)
+            with col1:
+                x_metric = st.selectbox("Select X-axis Metric", numeric_metrics, index=0)
+            with col2:
+                y_metric = st.selectbox("Select Y-axis Metric", numeric_metrics, index=1)
     
-            if df_scatter_clean.shape[0] < 2:
+            # Clean data — drop ETFs missing BOTH selected metrics
+            df_clean = df_scatter.dropna(subset=[x_metric, y_metric], how="any")
+    
+            if df_clean.shape[0] < 2:
                 st.warning("Insufficient data to render scatter plot.")
             else:
-                # Default: first metric on X, second on Y
-                x_metric = numeric_cols[0]
-                y_metric = numeric_cols[1]
-    
                 fig = px.scatter(
-                    df_scatter_clean,
+                    df_clean,
                     x=x_metric,
                     y=y_metric,
                     text="ETF",
-                    title=f"Scatter Plot: {x_metric} vs {y_metric}",
-                    size_max=12
+                    title=f"{x_metric} vs {y_metric}",
+                    size_max=12,
                 )
-    
                 fig.update_traces(textposition="top center")
                 st.plotly_chart(fig, use_container_width=True)
     
@@ -398,6 +401,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
