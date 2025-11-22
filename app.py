@@ -262,15 +262,17 @@ with left_col:
     # 🔥 TOP 3 METRICS SUMMARY (ORIGINAL STYLE)
     # -------------------------------------------
     # === Load Prices ===
-    prices = yf.download(master_tickers, period="max")["Adj Close"].dropna()
-    
-    # === Compute Returns BEFORE any metrics ===
-    returns = prices.pct_change().dropna()
 
+    # =============================
+    #     ETF SUMMARY SECTION
+    # =============================
+    
     st.subheader("ETF Summary")
     
-    # === Summary Metrics (Restored 3-column st.metric layout) ===
+    # --- Ensure returns exist before summary metrics ---
     try:
+        returns = prices.pct_change().dropna()
+    
         latest_ret = (returns.iloc[-1] * 100).round(2).astype(str) + "%"
         vol = (returns.std() * (252**0.5) * 100).round(2).astype(str) + "%"
         sharpe = ((returns.mean() / returns.std()) * (252**0.5)).round(2).astype(str)
@@ -288,25 +290,40 @@ with left_col:
     
     except Exception as e:
         st.error(f"Error computing summary metrics: {e}")
-
-
-
-    # --- Summary stats table (metrics) ---
+    
+    st.divider()
+    
+    
+    # =============================
+    #  SUMMARY TABLE (Metrics Table)
+    # =============================
+    
     st.markdown("### Summary Statistics (metrics used for scatter & heatmap)")
-    metrics_table = compute_metrics_table(prices, nifty_series=(nifty_prices.iloc[:,0] if not nifty_prices.empty else None))
+    
+    metrics_table = compute_metrics_table(
+        prices,
+        nifty_series=(nifty_prices.iloc[:, 0] if not nifty_prices.empty else None)
+    )
+    
     if metrics_table.empty:
         st.info("Not enough data to compute metrics.")
     else:
-        # Show nicely formatted table
-        st.dataframe(metrics_table.round(2).style.format("{:.2f}"), use_container_width=True)
-
+        st.dataframe(
+            metrics_table.round(2).style.format("{:.2f}"),
+            use_container_width=True
+        )
+    
     st.divider()
-
-    # --- Correlation heatmap of the metrics (original colors & heatmap feel) ---
+    
+    
+    # =============================
+    #  CORRELATION HEATMAP (Dark Mode)
+    # =============================
+    
     st.subheader("ETF Correlation (Dark Mode)")
-
+    
     try:
-        # Ensure daily returns exist
+        # Use daily returns for correlation
         daily_returns = prices.pct_change().dropna()
     
         corr = daily_returns.corr().round(2)
@@ -331,7 +348,9 @@ with left_col:
     except Exception as e:
         st.error(f"Error creating correlation heatmap: {e}")
 
-    
+
+
+   
     
     
 
@@ -452,6 +471,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
