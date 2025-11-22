@@ -88,40 +88,43 @@ def compute_rolling_sharpe(price_df, window=SHARPE_WINDOW):
     # return last available rolling value per column
     return roll_sharpe.iloc[-1]
 
-def compute_rolling_beta(price_df, benchmark_series, window=BETA_WINDOW):
-    """
-    Rolling beta: cov(asset, benchmark)/var(benchmark)
-    Returns the last rolling beta value per column.
-    """
-    daily = price_df.pct_change().dropna()
-    bench = benchmark_series.pct_change().dropna()
-    # align indices
-    combined = pd.concat([daily, bench], axis=1).dropna()
-    if combined.shape[0] < window:
-        # not enough data
-        # compute single-sample beta using entire combined
-        betas = {}
-        bench_ret = combined[bench.name]
-        var_b = bench_ret.var() if bench_ret.var() != 0 else np.nan
-        for col in daily.columns:
-            if col in combined:
-                cov = combined[col].cov(bench_ret)
-                betas[col] = cov / var_b if var_b and not np.isnan(var_b) else np.nan
-            else:
-                betas[col] = np.nan
-        return pd.Series(betas)
-    # compute rolling cov and rolling var for benchmark
-    betas = {}
-    for col in daily.columns:
-        series_pair = combined[[col, bench.name]]
-        roll_cov = series_pair[col].rolling(window).cov(series_pair[bench.name])
-        roll_cov_last = roll_cov.dropna().iloc[-1] if not roll_cov.dropna().empty else np.nan
-        # rolling var of benchmark
-        roll_var = series_pair[bench.name].rolling(window).var()
-        roll_var_last = roll_var.dropna().iloc[-1] if not roll_var.dropna().empty else np.nan
-        beta_val = roll_cov_last / roll_var_last if roll_var_last and not np.isnan(roll_var_last) else np.nan
-        betas[col] = beta_val
-    return pd.Series(betas)
+def compute_rolling_beta(price_df, nifty_series, window=90):
+    if nifty_series is None:
+        return pd.Series([np.nan] * len(price_df), index=price_df.index)
+
+    # daily returns
+    asset_ret = price_df.pct_change().dropna()
+    nifty_ret = nifty_series.pct_change().dropna()
+
+    # align
+    df = pd.concat([asset_ret, nifty_ret], axis=1).dropna()
+    df.columns = ["asset", "nifty"]
+
+    roll_cov = df["asset"].rolling(window).cov(df["nifty"])
+    roll_var = df["nifty"].rolling(window).var()
+
+    betas = []
+    for i in range(len(df)):
+        roll_cov_last = roll_cov.iloc[i]
+        roll_var_last = roll_var.iloc[i]
+
+        # SAFE CHECK
+        if (
+            roll_var_last is not None 
+            and not np.isnan(roll_var_last) 
+            and roll_var_last != 0
+        ):
+            beta_val = roll_cov_last / roll_var_last
+        else:
+            beta_val = np.nan
+
+        betas.append(beta_val)
+
+    beta_series = pd.Series(betas, index=df.index)
+
+    # reindex to original price_df index
+    return beta_series.reindex(price_df.index)
+
 
 def compute_metrics_table(price_df, nifty_series=None):
     """
@@ -414,3 +417,4 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
