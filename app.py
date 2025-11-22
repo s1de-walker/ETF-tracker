@@ -149,20 +149,27 @@ def compute_metrics_table(price_df, nifty_series):
     return pd.DataFrame(metrics, index=["Annualized Return", "Annualized Vol", "Sharpe Ratio", "Beta vs NIFTYBEES"])
 
 
+# TITLE
+st.title("ETF Tracker — Metrics & Factors")
+st.caption("Left: user-selected ETFs and metrics. Right: fixed factor panel.")
+st.divider()
+
+
+
 # ----------------------------
 # Layout
 # ----------------------------
 left_col, mid_col, right_col = st.columns((1, 0.05, 1))
 
-st.title("ETF Tracker — Metrics & Factors")
-st.caption("Left: user-selected ETFs and metrics. Right: fixed factor panel.")
-st.divider()
+
 
 # ----------------------------
 # LEFT COLUMN (Persistent)
 # ----------------------------
 with left_col:
-    st.header("Left — Controls & Metrics")
+    st.header("Controls & Metrics")
+
+    st.subheader("Select time range for research & analysis")
 
     default_end = datetime.today().date()
     default_start = default_end - timedelta(days=730)
@@ -411,6 +418,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
