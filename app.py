@@ -323,7 +323,8 @@ with left_col:
     #  SUMMARY TABLE (Metrics Table)
     # =============================
     
-    st.markdown("### Summary Statistics (metrics used for scatter & heatmap)")
+    st.markdown("### Summary Statistics ")
+    st.write("metrics used for scatter & heatmap")
     
     metrics_table = compute_metrics_table(
         prices,
@@ -496,6 +497,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
