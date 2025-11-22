@@ -264,42 +264,27 @@ with left_col:
     
     st.subheader("ETF Summary")
     
+    # === Summary Metrics (Restored 3-column st.metric layout) ===
     try:
-        # Highest Annualized Return
-        best_return_etf = metrics_table.loc["Annualized Return (%)"].idxmax()
-        best_return_val = metrics_table.loc["Annualized Return (%)", best_return_etf]
+        latest_ret = (returns.iloc[-1] * 100).round(2).astype(str) + "%"
+        vol = (returns.std() * (252**0.5) * 100).round(2).astype(str) + "%"
+        sharpe = ((returns.mean() / returns.std()) * (252**0.5)).round(2).astype(str)
     
-        # Most Volatile (Annualized Volatility)
-        most_vol_etf = metrics_table.loc["Annualized Volatility (%)"].idxmax()
-        most_vol_val = metrics_table.loc["Annualized Volatility (%)", most_vol_etf]
+        col1, col2, col3 = st.columns(3)
     
-        # Best Sharpe Ratio
-        best_sharpe_etf = metrics_table.loc["Sharpe Ratio"].idxmax()
-        best_sharpe_val = metrics_table.loc["Sharpe Ratio", best_sharpe_etf]
+        with col1:
+            st.metric("Daily Return (Last Obs)", latest_ret[selected_etf])
     
-        # 3-column metric layout
-        c1, c2, c3 = st.columns(3)
+        with col2:
+            st.metric("Annualized Volatility", vol[selected_etf])
     
-        c1.metric(
-            label="🚀 Highest Return ETF",
-            value=best_return_etf,
-            delta=f"{best_return_val:.1f}%",
-        )
-    
-        c2.metric(
-            label="⚡ Most Volatile ETF",
-            value=most_vol_etf,
-            delta=f"{most_vol_val:.1f}%",
-        )
-    
-        c3.metric(
-            label="🎯 Best Sharpe Ratio",
-            value=best_sharpe_etf,
-            delta=f"{best_sharpe_val:.2f}",
-        )
+        with col3:
+            st.metric("Sharpe Ratio", sharpe[selected_etf])
     
     except Exception as e:
         st.error(f"Error computing summary metrics: {e}")
+
+
 
     # --- Summary stats table (metrics) ---
     st.markdown("### Summary Statistics (metrics used for scatter & heatmap)")
@@ -462,6 +447,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
