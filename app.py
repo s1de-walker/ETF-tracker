@@ -302,13 +302,13 @@ with left_col:
         c1, c2, c3 = st.columns(3)
     
         with c1:
-            st.metric("🚀 Highest Annualized Return", best_return_etf, f"{best_return_value*100:.2f}%")
+            st.metric("🚀 Highest Annualized Return", best_return_etf, f"{best_return_value*100:.0f}%")
     
         with c2:
-            st.metric("⚡ Most Volatile ETF (Ann Vol)", most_volatile_etf, f"{most_volatile_value*100:.2f}%")
+            st.metric("⚡ Most Volatile ETF (Ann Vol)", most_volatile_etf, f"{most_volatile_value*100:.0f}%")
     
         with c3:
-            st.metric("🎯 Best Sharpe Ratio", best_sharpe_etf, f"{best_sharpe_value:.2f}")
+            st.metric("🎯 Best Sharpe Ratio", best_sharpe_etf, f"{best_sharpe_value:.1f}")
     
     except Exception as e:
         st.error(f"Error computing summary metrics: {e}")
@@ -496,6 +496,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
