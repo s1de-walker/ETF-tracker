@@ -88,42 +88,33 @@ def compute_rolling_sharpe(price_df, window=SHARPE_WINDOW):
     # return last available rolling value per column
     return roll_sharpe.iloc[-1]
 
-def compute_rolling_beta(price_df, nifty_series, window=90):
+def compute_rolling_beta(asset_prices, nifty_series, window=90):
     if nifty_series is None:
-        return pd.Series([np.nan] * len(price_df), index=price_df.index)
+        return pd.Series([np.nan] * len(asset_prices), index=asset_prices.index)
 
     # daily returns
-    asset_ret = price_df.pct_change().dropna()
+    asset_ret = asset_prices.pct_change().dropna()
     nifty_ret = nifty_series.pct_change().dropna()
 
-    # align
+    # align both
     df = pd.concat([asset_ret, nifty_ret], axis=1).dropna()
-    df.columns = ["asset", "nifty"]
+    df.columns = ["asset", "nifty"]     # <-- now correct because only two columns
 
     roll_cov = df["asset"].rolling(window).cov(df["nifty"])
     roll_var = df["nifty"].rolling(window).var()
 
-    betas = []
-    for i in range(len(df)):
-        roll_cov_last = roll_cov.iloc[i]
-        roll_var_last = roll_var.iloc[i]
-
-        # SAFE CHECK
-        if (
-            roll_var_last is not None 
-            and not np.isnan(roll_var_last) 
-            and roll_var_last != 0
-        ):
-            beta_val = roll_cov_last / roll_var_last
+    beta_vals = []
+    for cov, var in zip(roll_cov, roll_var):
+        if var is not None and not np.isnan(var) and var != 0:
+            beta_vals.append(cov / var)
         else:
-            beta_val = np.nan
+            beta_vals.append(np.nan)
 
-        betas.append(beta_val)
+    beta_series = pd.Series(beta_vals, index=df.index)
 
-    beta_series = pd.Series(betas, index=df.index)
+    # reindex back to original
+    return beta_series.reindex(asset_prices.index)
 
-    # reindex to original price_df index
-    return beta_series.reindex(price_df.index)
 
 
 def compute_metrics_table(price_df, nifty_series=None):
@@ -417,4 +408,5 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
