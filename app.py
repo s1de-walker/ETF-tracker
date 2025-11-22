@@ -117,46 +117,37 @@ def compute_rolling_beta(asset_prices, nifty_series, window=90):
 
 
 
-def compute_metrics_table(price_df, nifty_series=None):
-    """
-    Compute the four metrics per ticker:
-    - Annualized Return (%)
-    - Annualized Volatility (%)
-    - Rolling Sharpe (SHARPE_WINDOW)
-    - Beta vs NIFTYBEES (BETA_WINDOW) -- relies on nifty_series
-    Returns a DataFrame with metrics as rows and tickers as columns.
-    """
-    if price_df.empty:
-        return pd.DataFrame()
+def compute_metrics_table(price_df, nifty_series):
+    metrics = {}
 
-    ann_ret = compute_annualized_return(price_df) * 100
-    ann_vol = compute_annualized_volatility(price_df) * 100
-    roll_sharpe = compute_rolling_sharpe(price_df, window=SHARPE_WINDOW)
-    # ensure EP has same columns shape; roll_sharpe may be Series with same index as price_df.columns
-    roll_sharpe = roll_sharpe.rename(lambda x: x).astype(float)
+    for etf in price_df.columns:
+        series = price_df[etf]
 
-    # Beta
-    if nifty_series is None or nifty_series.empty:
-        # fill with NaNs
-        betas = pd.Series(index=price_df.columns, dtype=float)
-    else:
-        betas = compute_rolling_beta(price_df, nifty_series, window=BETA_WINDOW)
+        # returns
+        ret = series.pct_change().dropna()
 
-    # Build table: rows = metrics, columns = tickers
-    metric_names = [
-        f"Annualized Return (%)",
-        f"Annualized Volatility (%)",
-        f"Rolling Sharpe ({SHARPE_WINDOW}d)",
-        f"Beta vs NIFTYBEES ({BETA_WINDOW}d)"
-    ]
+        # annualized return
+        ann_return = (1 + ret.mean()) ** 252 - 1
 
-    df = pd.DataFrame(index=metric_names, columns=price_df.columns)
-    df.loc[metric_names[0]] = ann_ret
-    df.loc[metric_names[1]] = ann_vol
-    df.loc[metric_names[2]] = roll_sharpe
-    df.loc[metric_names[3]] = betas * 1.0  # keep as numeric
+        # annualized vol
+        ann_vol = ret.std() * np.sqrt(252)
 
-    return df.astype(float)
+        # sharpe
+        sharpe = ann_return / ann_vol if ann_vol != 0 else np.nan
+
+        # rolling beta (new!)
+        beta_series = compute_rolling_beta(series, nifty_series, window=90)
+        beta_last = beta_series.dropna().iloc[-1] if beta_series.dropna().size > 0 else np.nan
+
+        metrics[etf] = [
+            ann_return,
+            ann_vol,
+            sharpe,
+            beta_last
+        ]
+
+    return pd.DataFrame(metrics, index=["Annualized Return", "Annualized Vol", "Sharpe Ratio", "Beta vs NIFTYBEES"])
+
 
 # ----------------------------
 # Layout
@@ -408,5 +399,6 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
