@@ -261,7 +261,12 @@ with left_col:
     # -------------------------------------------
     # 🔥 TOP 3 METRICS SUMMARY (ORIGINAL STYLE)
     # -------------------------------------------
+    # === Load Prices ===
+    prices = yf.download(etf_list, period="max")["Adj Close"].dropna()
     
+    # === Compute Returns BEFORE any metrics ===
+    returns = prices.pct_change().dropna()
+
     st.subheader("ETF Summary")
     
     # === Summary Metrics (Restored 3-column st.metric layout) ===
@@ -447,6 +452,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
