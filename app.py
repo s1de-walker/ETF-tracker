@@ -324,7 +324,7 @@ with left_col:
     # =============================
     
     st.markdown("### Summary Statistics ")
-    st.write("metrics used for scatter & heatmap")
+    #st.write("metrics used for scatter & heatmap")
     
     metrics_table = compute_metrics_table(
         prices,
@@ -373,11 +373,8 @@ with left_col:
     
     except Exception as e:
         st.error(f"Error creating correlation heatmap: {e}")
-
-
-
    
-    
+    st.divider()
     
 
 
@@ -497,6 +494,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
