@@ -273,63 +273,55 @@ with left_col:
     # ===========================================
 
     # ===========================================
-#  LEADERBOARD SUMMARY (Using metrics_table)
-# ===========================================
+    #  LEADERBOARD SUMMARY (Using metrics_table)
+    # ===========================================
 
-    st.subheader("ETF Summary (Across Selected ETFs)")
-    
+    st.subheader("ETF Summary")
+
     try:
-        # Compute table (same as your stats table)
-        metrics_table = compute_metrics_table(
-            prices,
-            nifty_series=(nifty_prices.iloc[:,0] if not nifty_prices.empty else None)
-        )
+        # Extract the metrics from the metrics_table
+        ann_ret = metrics_table.loc["Annualized Return"]
+        ann_vol = metrics_table.loc["Annualized Vol"]
+        sharpe = metrics_table.loc["Sharpe Ratio"]
     
-        # Extract columns safely
-        ann_returns = metrics_table["Annualized Return"]
-        ann_vol = metrics_table["Annualized Volatility"]
-        sharpe = metrics_table["Sharpe Ratio"]
+        # ---- Find leaders ----
+        best_return_etf = ann_ret.idxmax()
+        best_return_value = ann_ret.max()
     
-        # Identify leaders
-        best_return_etf = ann_returns.idxmax()
-        best_vol_etf = ann_vol.idxmax()
+        most_volatile_etf = ann_vol.idxmax()
+        most_volatile_value = ann_vol.max()
+    
         best_sharpe_etf = sharpe.idxmax()
+        best_sharpe_value = sharpe.max()
     
-        # Format for display
-        best_ret_val = f"{ann_returns.max():.2f}%"
-        best_vol_val = f"{ann_vol.max():.2f}%"
-        best_sharpe_val = f"{sharpe.max():.2f}"
+        # ---- Display in 3 metric cards ----
+        c1, c2, c3 = st.columns(3)
     
-        col1, col2, col3 = st.columns(3)
-    
-        with col1:
+        with c1:
             st.metric(
-                label="Highest Annualized Return",
-                value=best_return_etf,
-                delta=best_ret_val
+                label="🚀 Highest Annualized Return",
+                value=f"{best_return_etf}",
+                delta=f"{best_return_value:.2f}%"
             )
     
-        with col2:
+        with c2:
             st.metric(
-                label="Most Volatile ETF",
-                value=best_vol_etf,
-                delta=best_vol_val
+                label="⚡ Most Volatile ETF (Ann Vol)",
+                value=f"{most_volatile_etf}",
+                delta=f"{most_volatile_value:.2f}%"
             )
     
-        with col3:
+        with c3:
             st.metric(
-                label="Best Sharpe Ratio",
-                value=best_sharpe_etf,
-                delta=best_sharpe_val
+                label="🎯 Best Sharpe Ratio",
+                value=f"{best_sharpe_etf}",
+                delta=f"{best_sharpe_value:.2f}"
             )
     
     except Exception as e:
         st.error(f"Error computing summary metrics: {e}")
     
-    st.divider()
-
-
-    
+        
     
     # =============================
     #  SUMMARY TABLE (Metrics Table)
@@ -508,6 +500,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
