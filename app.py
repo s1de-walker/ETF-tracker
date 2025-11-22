@@ -297,6 +297,48 @@ with left_col:
     else:
         st.info("Not enough metrics data to draw heatmap.")
 
+    st.subheader("Scatter Plot: Compare Metrics")
+
+    try:
+        # Extract metrics from the metrics table
+        df_scatter = metrics_table.T.copy()
+    
+        # Convert index to normal column
+        df_scatter["ETF"] = df_scatter.index
+    
+        # Select only numeric metric columns
+        numeric_cols = df_scatter.select_dtypes(include=['float', 'int']).columns.tolist()
+    
+        # Require at least 2 numeric metrics
+        if len(numeric_cols) < 2:
+            st.warning("Not enough numeric metrics available to generate scatter plot.")
+        else:
+            # Drop rows where all selected numeric metrics are NaN
+            df_scatter_clean = df_scatter.dropna(subset=numeric_cols, how='all')
+    
+            if df_scatter_clean.shape[0] < 2:
+                st.warning("Insufficient data to render scatter plot.")
+            else:
+                # Default: first metric on X, second on Y
+                x_metric = numeric_cols[0]
+                y_metric = numeric_cols[1]
+    
+                fig = px.scatter(
+                    df_scatter_clean,
+                    x=x_metric,
+                    y=y_metric,
+                    text="ETF",
+                    title=f"Scatter Plot: {x_metric} vs {y_metric}",
+                    size_max=12
+                )
+    
+                fig.update_traces(textposition="top center")
+                st.plotly_chart(fig, use_container_width=True)
+    
+    except Exception as e:
+        st.error(f"Error extracting metrics for scatter plot: {e}")
+
+
     st.divider()
 
     # ------------------------------
@@ -356,6 +398,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
