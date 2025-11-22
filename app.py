@@ -1,4 +1,9 @@
-# app.py - robust, full ETF tracker with persistent left column and fixed-factor right column
+# app.py - Final version
+# - Left column: persistent (user selects ETFs & dates)
+# - Computes metrics: Annualized Return, Annualized Volatility, Rolling Sharpe (60d), Beta vs NIFTYBEES (90d)
+# - Correlation heatmap of metrics with custom colors
+# - Scatter plot (metrics) at bottom of left column
+# - Right column: fixed factors panel (5 ETFs)
 
 import streamlit as st
 import yfinance as yf
@@ -7,74 +12,19 @@ import numpy as np
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 
-st.set_page_config(layout="wide", page_title="ETF Tracker")
+st.set_page_config(layout="wide", page_title="ETF Tracker - Final")
 
-# -----------------------
-# Helper utilities
-# -----------------------
-def safe_extract_prices(df):
-    """
-    Given a dataframe returned by yf.download, return a prices DataFrame
-    with tickers as columns. Handles multiindex and single-index cases.
-    """
-    if df is None or df.empty:
-        return pd.DataFrame()
+# ----------------------------
+# PARAMETERS (defaults you asked for)
+# ----------------------------
+SHARPE_WINDOW = 60  # days (rolling)
+BETA_WINDOW = 90    # days (rolling)
 
-    cols = df.columns
-    # MultiIndex (typical when multiple tickers & multiple fields)
-    if isinstance(cols, pd.MultiIndex):
-        # Prefer 'Adj Close' then 'Close'
-        for prefer in ["Adj Close", "Close"]:
-            if prefer in cols.levels[0]:
-                prices = df[prefer].copy()
-                return prices
-        # If neither level exists, try to collapse by taking first level if that makes sense
-        # Fallback: take last level
-        try:
-            # try to get the last level (this may be the ticker if structure differs)
-            prices = df.xs(df.columns.levels[1][0], axis=1, level=1, drop_level=False)
-            return prices
-        except Exception:
-            return pd.DataFrame()
-    else:
-        # Single-level columns. Could be 'Adj Close', 'Close' or ticker names.
-        if "Adj Close" in df.columns:
-            return df[["Adj Close"]].rename(columns={"Adj Close": df.columns.name or "PRICE"})
-        if "Close" in df.columns:
-            return df[["Close"]].rename(columns={"Close": df.columns.name or "PRICE"})
-        # Otherwise assume columns are already tickers (e.g. single ticker download with auto-labeled col)
-        return df.copy()
-
-def compute_summary_stats(price_df):
-    """Return summary stats DataFrame for given price dataframe."""
-    if price_df.empty:
-        return pd.DataFrame()
-
-    # daily returns
-    daily = price_df.pct_change().dropna()
-    # cumulative return
-    cumulative = (price_df.iloc[-1] / price_df.iloc[0]) - 1
-    ann_vol = daily.std() * np.sqrt(252)
-    # sharpe using mean daily returns annualized / ann_vol
-    mean_ann = daily.mean() * 252
-    sharpe = (mean_ann / ann_vol).replace([np.inf, -np.inf], np.nan)
-    var95 = daily.quantile(0.05)
-
-    summary = pd.DataFrame({
-        "Total Return (%)": cumulative * 100,
-        "Annualized Volatility (%)": ann_vol * 100,
-        "Sharpe Ratio": sharpe,
-        "VaR 95 (%)": var95 * 100
-    })
-
-    # Ensure consistent ordering of columns when price_df has tickers as columns
-    summary.index.name = "Ticker"
-    return summary
-
-# -----------------------
-# Fixed factor ETFs for RHS
-# -----------------------
+# Factor mapping for RHS
 FACTOR_MAP = {
     "MOVALUE.NS": "Value",
     "MOMOMENTUM.NS": "Momentum",
@@ -84,43 +34,169 @@ FACTOR_MAP = {
 }
 FACTOR_TICKERS = list(FACTOR_MAP.keys())
 
-# -----------------------
-# Layout: two columns
-# -----------------------
+# ----------------------------
+# Helpers
+# ----------------------------
+def safe_extract_prices(df):
+    """Handle different shapes returned by yf.download and return price DataFrame with tickers as columns."""
+    if df is None or df.empty:
+        return pd.DataFrame()
+    cols = df.columns
+    if isinstance(cols, pd.MultiIndex):
+        # prefer Adj Close, then Close
+        for prefer in ["Adj Close", "Close"]:
+            if prefer in cols.levels[0]:
+                return df[prefer].copy()
+        # fallback: try to get level with tickers if possible
+        try:
+            # try to select the last level as prices
+            return df.xs("Close", level=0, axis=1).copy()
+        except Exception:
+            return pd.DataFrame()
+    else:
+        # single-level columns (could already be tickers)
+        # if 'Adj Close' or 'Close' present as column names
+        if "Adj Close" in df.columns:
+            return df[["Adj Close"]].rename(columns={"Adj Close": df.columns.name or "PRICE"})
+        if "Close" in df.columns:
+            return df[["Close"]].rename(columns={"Close": df.columns.name or "PRICE"})
+        return df.copy()
+
+def compute_annualized_return(price_df):
+    """Annualized return (geometric) for each column."""
+    # (end / start)^(252/period) - 1
+    periods = (price_df.index[-1] - price_df.index[0]).days
+    if periods <= 0:
+        return pd.Series(index=price_df.columns, dtype=float)
+    total_ret = (price_df.iloc[-1] / price_df.iloc[0]) - 1
+    annual_factor = 252 / (price_df.shape[0] if price_df.shape[0] > 0 else 252)
+    # approximate annualization using sqrt-scaling on returns via daily mean compounding can be noisy; use geometric approximation
+    ann_return = (1 + total_ret) ** (annual_factor) - 1
+    return ann_return
+
+def compute_annualized_volatility(price_df):
+    daily = price_df.pct_change().dropna()
+    ann_vol = daily.std() * np.sqrt(252)
+    return ann_vol
+
+def compute_rolling_sharpe(price_df, window=SHARPE_WINDOW):
+    daily = price_df.pct_change().dropna()
+    # rolling mean (daily) annualized and rolling std (daily) annualized
+    roll_mean = daily.rolling(window).mean() * 252
+    roll_std = daily.rolling(window).std() * np.sqrt(252)
+    roll_sharpe = roll_mean / roll_std
+    # return last available rolling value per column
+    return roll_sharpe.iloc[-1]
+
+def compute_rolling_beta(price_df, benchmark_series, window=BETA_WINDOW):
+    """
+    Rolling beta: cov(asset, benchmark)/var(benchmark)
+    Returns the last rolling beta value per column.
+    """
+    daily = price_df.pct_change().dropna()
+    bench = benchmark_series.pct_change().dropna()
+    # align indices
+    combined = pd.concat([daily, bench], axis=1).dropna()
+    if combined.shape[0] < window:
+        # not enough data
+        # compute single-sample beta using entire combined
+        betas = {}
+        bench_ret = combined[bench.name]
+        var_b = bench_ret.var() if bench_ret.var() != 0 else np.nan
+        for col in daily.columns:
+            if col in combined:
+                cov = combined[col].cov(bench_ret)
+                betas[col] = cov / var_b if var_b and not np.isnan(var_b) else np.nan
+            else:
+                betas[col] = np.nan
+        return pd.Series(betas)
+    # compute rolling cov and rolling var for benchmark
+    betas = {}
+    for col in daily.columns:
+        series_pair = combined[[col, bench.name]]
+        roll_cov = series_pair[col].rolling(window).cov(series_pair[bench.name])
+        roll_cov_last = roll_cov.dropna().iloc[-1] if not roll_cov.dropna().empty else np.nan
+        # rolling var of benchmark
+        roll_var = series_pair[bench.name].rolling(window).var()
+        roll_var_last = roll_var.dropna().iloc[-1] if not roll_var.dropna().empty else np.nan
+        beta_val = roll_cov_last / roll_var_last if roll_var_last and not np.isnan(roll_var_last) else np.nan
+        betas[col] = beta_val
+    return pd.Series(betas)
+
+def compute_metrics_table(price_df, nifty_series=None):
+    """
+    Compute the four metrics per ticker:
+    - Annualized Return (%)
+    - Annualized Volatility (%)
+    - Rolling Sharpe (SHARPE_WINDOW)
+    - Beta vs NIFTYBEES (BETA_WINDOW) -- relies on nifty_series
+    Returns a DataFrame with metrics as rows and tickers as columns.
+    """
+    if price_df.empty:
+        return pd.DataFrame()
+
+    ann_ret = compute_annualized_return(price_df) * 100
+    ann_vol = compute_annualized_volatility(price_df) * 100
+    roll_sharpe = compute_rolling_sharpe(price_df, window=SHARPE_WINDOW)
+    # ensure EP has same columns shape; roll_sharpe may be Series with same index as price_df.columns
+    roll_sharpe = roll_sharpe.rename(lambda x: x).astype(float)
+
+    # Beta
+    if nifty_series is None or nifty_series.empty:
+        # fill with NaNs
+        betas = pd.Series(index=price_df.columns, dtype=float)
+    else:
+        betas = compute_rolling_beta(price_df, nifty_series, window=BETA_WINDOW)
+
+    # Build table: rows = metrics, columns = tickers
+    metric_names = [
+        f"Annualized Return (%)",
+        f"Annualized Volatility (%)",
+        f"Rolling Sharpe ({SHARPE_WINDOW}d)",
+        f"Beta vs NIFTYBEES ({BETA_WINDOW}d)"
+    ]
+
+    df = pd.DataFrame(index=metric_names, columns=price_df.columns)
+    df.loc[metric_names[0]] = ann_ret
+    df.loc[metric_names[1]] = ann_vol
+    df.loc[metric_names[2]] = roll_sharpe
+    df.loc[metric_names[3]] = betas * 1.0  # keep as numeric
+
+    return df.astype(float)
+
+# ----------------------------
+# Layout
+# ----------------------------
 left_col, mid_col, right_col = st.columns((1, 0.05, 1))
 
-# App header (global)
-st.title("ETF Tracker")
-st.caption("Track ETFs — left column is persistent, right column shows fixed factor panel.")
+st.title("ETF Tracker — Metrics & Factors")
+st.caption("Left: user-selected ETFs and metrics. Right: fixed factor panel.")
 st.divider()
 
-# -----------------------
-# LEFT COLUMN - full app controls, cumulative chart, stats, scatter (moved earlier)
-# -----------------------
+# ----------------------------
+# LEFT COLUMN (Persistent)
+# ----------------------------
 with left_col:
-    st.markdown("### Analysis Controls")
+    st.header("Left — Controls & Metrics")
 
-    # Date inputs (defaults)
     default_end = datetime.today().date()
     default_start = default_end - timedelta(days=730)
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        start_date = st.date_input("Start Date", default_start, key="left_start")
-    with col_b:
-        end_date = st.date_input("End Date", default_end, key="left_end")
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start Date", default_start, key="start_date")
+    with col2:
+        end_date = st.date_input("End Date", default_end, key="end_date")
 
-    # Basic validation
+    # validation
     if end_date < start_date:
-        st.error("🚨 End Date cannot be earlier than Start Date. Please select a valid range.")
+        st.error("End Date cannot be earlier than Start Date.")
         st.stop()
-
     if start_date > datetime.today().date() or end_date > datetime.today().date():
-        st.error("🚨 Dates cannot be in the future.")
+        st.error("Dates cannot be in the future.")
         st.stop()
 
-    # ETF selection
-    st.markdown("### Select ETFs")
+    # tickers selection
     master_tickers = [
         "NIFTYBEES.NS", "NEXT50IETF.NS", "BANKBEES.NS", "MASPTOP50.NS", "MON100.NS", "MAFANG.NS",
         "MONQ50.NS", "GOLDBEES.NS", "SILVERETF.NS", "COMMOIETF.NS", "HDFCQUAL.NS", "LOWVOLIETF.NS",
@@ -131,185 +207,210 @@ with left_col:
         "LIQUIDBEES.NS", "VYM", "SCHD", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY",
         "VOO", "USMV", "FEZ", "BBEU"
     ]
-
     default_tickers = ["MASPTOP50.NS", "NIFTYBEES.NS", "GOLDBEES.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "MOVALUE.NS"]
-    selected_tickers = st.multiselect("Choose ETFs:", master_tickers, default=default_tickers)
+    selected_tickers = st.multiselect("Select ETFs to analyze", master_tickers, default=default_tickers)
 
     if not selected_tickers:
-        st.error("🚨 Please select at least one ETF to proceed.")
+        st.error("Please select at least one ETF.")
         st.stop()
 
     st.divider()
 
-    # --- SCATTER PLOT MOVED EARLIER IN LHS ---
-    st.markdown("### Scatter Plot: Compare Two Metrics (from summary)")
-    # We'll compute summary after downloading; show placeholders if not ready
-    # Download data for selected tickers
+    # Download selected tickers (store in session_state for persistence)
     yf_start = start_date.strftime("%Y-%m-%d")
     yf_end = (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # Try to download selected tickers
     raw = yf.download(selected_tickers, start=yf_start, end=yf_end, progress=False)
-
     prices = safe_extract_prices(raw)
-    # If single-column, ensure columns are tickers
-    if prices.empty:
-        st.warning("No price data returned for selected tickers/dates.")
-    else:
-        # If the extracted df has columns that are not the tickers (happens when single column), try rename
-        # Make sure columns are the selected tickers where possible
-        if len(prices.columns) == 1 and len(selected_tickers) == 1:
-            prices.columns = selected_tickers
-        # compute summary
-        summary_stats = compute_summary_stats(prices)
-        # If summary is empty or shape mismatch, handle gracefully
-        if summary_stats.empty:
-            st.warning("Insufficient data to compute metrics for scatter plot.")
-        else:
-            metrics = summary_stats.index.tolist()
-            if len(metrics) >= 2:
-                col1, col2 = st.columns(2)
-                with col1:
-                    metric_x = st.selectbox("Select Metric 1 (x)", metrics, index=0)
-                with col2:
-                    metric_y = st.selectbox("Select Metric 2 (y)", metrics, index=1)
-                # x and y values from summary (ordered by columns/tickers)
-                x_vals = summary_stats.loc[metric_x].values
-                y_vals = summary_stats.loc[metric_y].values
-                # labels are tickers
-                labels = summary_stats.columns.tolist()
+    # if single column and single ticker, set correct column name
+    if not prices.empty and len(prices.columns) == 1 and len(selected_tickers) == 1:
+        prices.columns = selected_tickers
 
-                fig_scatter = px.scatter(
-                    x=x_vals,
-                    y=y_vals,
-                    labels={"x": metric_x, "y": metric_y},
-                    title=f"Scatter: {metric_x} vs {metric_y}",
-                    text=labels
-                )
-                fig_scatter.update_traces(textposition="top center", marker=dict(size=10))
-                fig_scatter.update_layout(template="plotly_dark", height=450)
-                st.plotly_chart(fig_scatter, use_container_width=True)
+    # Always ensure NIFTYBEES.NS is downloaded in background for beta calculation
+    try:
+        if "NIFTYBEES.NS" not in selected_tickers:
+            raw_nifty = yf.download("NIFTYBEES.NS", start=yf_start, end=yf_end, progress=False)
+            nifty_prices = safe_extract_prices(raw_nifty)
+            if not nifty_prices.empty:
+                # single column rename
+                if len(nifty_prices.columns) == 1:
+                    nifty_prices.columns = ["NIFTYBEES.NS"]
+        else:
+            # if user already selected it, use it from prices
+            if "NIFTYBEES.NS" in prices.columns:
+                nifty_prices = prices[["NIFTYBEES.NS"]].copy()
             else:
-                st.info("Not enough metrics to build scatter plot.")
+                raw_nifty = yf.download("NIFTYBEES.NS", start=yf_start, end=yf_end, progress=False)
+                nifty_prices = safe_extract_prices(raw_nifty)
+                if len(nifty_prices.columns) == 1:
+                    nifty_prices.columns = ["NIFTYBEES.NS"]
+    except Exception:
+        nifty_prices = pd.DataFrame()
+
+    # Store in session_state for persistence (keeps LHS stable across reruns)
+    st.session_state.prices = prices
+    st.session_state.nifty_prices = nifty_prices
+
+    # --- Left cumulative performance chart ---
+    st.markdown("### Cumulative Performance (Selected ETFs)")
+    if prices.empty:
+        st.info("No price data available for the selected tickers/dates.")
+    else:
+        cum = prices.pct_change().add(1).cumprod().sub(1)
+        fig = go.Figure()
+        for t in cum.columns:
+            fig.add_trace(go.Scatter(x=cum.index, y=cum[t], mode="lines", name=t))
+        fig.update_layout(template="plotly_dark", hovermode="x unified", height=380)
+        st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
-    # --- CUMULATIVE PERFORMANCE CHART (LEFT) ---
-    st.markdown("### Cumulative Performance (Selected ETFs)")
-    if prices.empty:
-        st.info("No cumulative chart available (no data).")
+    # --- Summary stats table (metrics) ---
+    st.markdown("### Summary Statistics (metrics used for scatter & heatmap)")
+    metrics_table = compute_metrics_table(prices, nifty_series=(nifty_prices.iloc[:,0] if not nifty_prices.empty else None))
+    if metrics_table.empty:
+        st.info("Not enough data to compute metrics.")
     else:
-        cumulative = prices.pct_change().add(1).cumprod().sub(1)
-        fig = go.Figure()
-        for t in prices.columns:
-            fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative[t], mode="lines", name=t))
-        fig.update_layout(template="plotly_dark", hovermode="x unified", height=420,
-                          legend=dict(title="ETFs"))
-        st.plotly_chart(fig, use_container_width=True)
+        # Show nicely formatted table
+        st.dataframe(metrics_table.round(2).style.format("{:.2f}"), use_container_width=True)
 
-    # --- SUMMARY STATS (LEFT) ---
-    st.markdown("### ETF Summary (Selected)")
-    left_summary = compute_summary_stats(prices)
-    if not left_summary.empty:
-        # transpose for display like earlier versions (tickers as rows)
-        display_df = left_summary.T[selected_tickers].T if (set(selected_tickers) <= set(left_summary.index)) else left_summary
-        # format numbers
-        display_df_formatted = display_df.copy()
-        # Align index order to selected_tickers where possible
+    st.divider()
+
+    # --- Correlation heatmap of the metrics (original colors & heatmap feel) ---
+    st.markdown("### Correlation Heatmap (metrics)")
+    if not metrics_table.empty:
+        # metrics_table rows = metrics, columns = tickers. We want correlation across tickers for each metric,
+        # but the user asked heatmap of the metrics — we will compute correlation across tickers using the metric values.
+        # Make a matrix of correlation between tickers based on metric vectors (so the heatmap shows ticker vs ticker correlation).
+        # But they wanted heatmap of metrics; the original request earlier suggested heatmap of returns correlation.
+        # Here: we'll produce a metric-correlation heatmap where each cell = correlation between two tickers across the metrics.
+        # First transpose so rows=tickers, cols=metrics
+        df_metrics_t = metrics_table.T  # rows = tickers, cols = metrics
+        # Compute correlation between tickers across metrics
+        corr_matrix = df_metrics_t.corr(method='pearson')  # correlation across metric names
+        # But typically heatmap desired is ticker vs ticker correlation of returns (we'll provide both)
+        # Primary: show correlation of tickers based on returns (like original)
         try:
-            display_df_formatted = display_df.loc[selected_tickers]
+            returns = prices.pct_change().dropna()
+            returns_corr = returns.corr().round(2)
+            heatmap_df = returns_corr
+            heatmap_title = "Returns Correlation (tickers)"
         except Exception:
-            pass
-        # Round and format
-        display_df_formatted = display_df_formatted.round(2)
-        st.dataframe(display_df_formatted.style.format("{:.2f}"))
+            heatmap_df = df_metrics_t.T.corr().round(2)
+            heatmap_title = "Metrics Correlation"
+
+        # custom colormap: blue-white-maroon similar to earlier
+        colors = ["#1b3368", "white", "#7c2f57"]
+        cmap = LinearSegmentedColormap.from_list("custom_cmap", colors)
+
+        fig, ax = plt.subplots(figsize=(6, 5))
+        sns.heatmap(heatmap_df, annot=True, fmt=".2f", cmap=cmap, vmin=-1, vmax=1, ax=ax, cbar_kws={"shrink": .8})
+        ax.set_title(heatmap_title)
+        plt.tight_layout()
+        st.pyplot(fig)
     else:
-        st.info("Summary stats not available for selected tickers.")
+        st.info("Not enough metrics data to draw heatmap.")
 
-    # Correlation matrix
-    st.markdown("### Correlation (Selected ETFs)")
-    try:
-        corr = cumulative[selected_tickers].corr().round(2)
-        st.dataframe(corr.style.format("{:.2f}"))
-    except Exception:
-        st.info("Correlation matrix unavailable.")
+    st.divider()
 
-# small spacer
-with mid_col:
-    st.write("")
+    # ------------------------------
+    # SCATTER PLOT (bottom of LHS)
+    # Selectable metrics (the 4 requested)
+    # ------------------------------
+    st.markdown("### Scatter Plot — Choose two metrics to compare (bottom of LHS)")
 
-# -----------------------
-# RIGHT COLUMN - Fixed factor panel (no user selection)
-# -----------------------
+    metric_names = [
+        "Annualized Return (%)",
+        "Annualized Volatility (%)",
+        f"Rolling Sharpe ({SHARPE_WINDOW}d)",
+        f"Beta vs NIFTYBEES ({BETA_WINDOW}d)"
+    ]
+
+    if metrics_table.empty:
+        st.info("Metrics table unavailable for scatter plot.")
+    else:
+        # metrics_table has rows=metrics, cols=tickers
+        # Build selection
+        colx, coly = st.columns(2)
+        with colx:
+            metric_x = st.selectbox("X metric", metric_names, index=0)
+        with coly:
+            metric_y = st.selectbox("Y metric", metric_names, index=1)
+
+        # extract x and y arrays (ordered by tickers)
+        try:
+            x_vals = metrics_table.loc[metric_x].values.astype(float)
+            y_vals = metrics_table.loc[metric_y].values.astype(float)
+            labels = metrics_table.columns.tolist()
+        except Exception:
+            st.error("Error extracting metrics for scatter plot.")
+            x_vals = np.array([])
+            y_vals = np.array([])
+            labels = []
+
+        if x_vals.size and y_vals.size:
+            fig_sc = px.scatter(
+                x=x_vals,
+                y=y_vals,
+                text=labels,
+                labels={"x": metric_x, "y": metric_y},
+                title=f"{metric_x} vs {metric_y}"
+            )
+            fig_sc.update_traces(textposition="top center", marker=dict(size=10))
+            fig_sc.update_layout(template="plotly_dark", height=480)
+            st.plotly_chart(fig_sc, use_container_width=True)
+        else:
+            st.info("Insufficient data to render scatter plot.")
+
+# ----------------------------
+# RIGHT COLUMN (fixed factor panel)
+# ----------------------------
 with right_col:
-    st.markdown("### Factor Dashboard (fixed list)")
+    st.header("Right — Fixed Factor Panel")
 
-    # Ensure we use the same date range selection from left
-    # falling back to defaults if not present
-    try:
-        start_for_factors = start_date
-        end_for_factors = end_date
-    except Exception:
-        start_for_factors = datetime.today().date() - timedelta(days=365 * 2)
-        end_for_factors = datetime.today().date()
+    # Use same date range
+    yf_start_f = start_date.strftime("%Y-%m-%d")
+    yf_end_f = (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    yf_start_f = start_for_factors.strftime("%Y-%m-%d")
-    yf_end_f = (end_for_factors + timedelta(days=1)).strftime("%Y-%m-%d")
-
-    # Download factor prices
     raw_factors = yf.download(FACTOR_TICKERS, start=yf_start_f, end=yf_end_f, progress=False)
-
     factor_prices = safe_extract_prices(raw_factors)
-    # if single-column and matches single ticker, rename
-    if not factor_prices.empty and len(factor_prices.columns) == 1 and len(FACTOR_TICKERS) == 1:
-        factor_prices.columns = FACTOR_TICKERS
-
     if factor_prices.empty:
-        st.error("No factor ETF data available for the selected dates.")
+        st.error("No factor data for the selected dates.")
     else:
-        # ensure columns are in the defined order
-        # if factor_prices columns are tickers, reorder; otherwise attempt to map
-        cols = list(factor_prices.columns)
-        # If extracted columns are ticker strings -> reorder
-        try:
-            ordered = [c for c in FACTOR_TICKERS if c in factor_prices.columns]
+        # reorder to defined order and rename
+        ordered = [t for t in FACTOR_TICKERS if t in factor_prices.columns]
+        if ordered:
             factor_prices = factor_prices[ordered]
-        except Exception:
-            pass
+        factor_prices = factor_prices.rename(columns=FACTOR_MAP)
 
-        # compute cumulative returns (as pct change cumulative)
+        # cumulative
         factor_cum = factor_prices.pct_change().add(1).cumprod().sub(1)
 
-        # rename tickers to pretty names for plotting & tables where possible
-        rename_map = {ticker: FACTOR_MAP.get(ticker, ticker) for ticker in factor_cum.columns}
-        factor_cum_renamed = factor_cum.rename(columns=rename_map)
-        factor_prices_renamed = factor_prices.rename(columns=rename_map)
-
-        # Plot cumulative returns (indexed to 0 i.e. cumulative pct)
         st.subheader("Cumulative Returns (Factors)")
-        fig = go.Figure()
-        for col in factor_cum_renamed.columns:
-            fig.add_trace(go.Scatter(x=factor_cum_renamed.index, y=factor_cum_renamed[col],
-                                     mode="lines", name=col))
-        fig.update_layout(template="plotly_dark", height=450, hovermode="x unified",
-                          legend=dict(title="Factors"))
-        st.plotly_chart(fig, use_container_width=True)
+        figf = go.Figure()
+        for col in factor_cum.columns:
+            figf.add_trace(go.Scatter(x=factor_cum.index, y=factor_cum[col], mode="lines", name=col))
+        figf.update_layout(template="plotly_dark", height=420, hovermode="x unified")
+        st.plotly_chart(figf, use_container_width=True)
 
         st.divider()
 
-        # Summary statistics for factors
-        st.subheader("Factor Summary Statistics")
-        factor_summary = compute_summary_stats(factor_prices_renamed)
-        if not factor_summary.empty:
-            # rename index entries to pretty names if index currently tickers
-            try:
-                # factor_summary index is tickers; replace with pretty names
-                pretty_index = [FACTOR_MAP.get(idx, idx) for idx in factor_summary.index]
-                factor_summary.index = pretty_index
-            except Exception:
-                pass
+        st.subheader("Factor Summary Stats")
+        # compute simple stats: total return, ann vol, sharpe
+        ann_ret_f = compute_annualized_return(factor_prices) * 100
+        ann_vol_f = compute_annualized_volatility(factor_prices) * 100
+        # approximate sharpe: mean_ann / ann_vol
+        daily_f = factor_prices.pct_change().dropna()
+        mean_ann_f = daily_f.mean() * 252
+        sharpe_f = (mean_ann_f / (daily_f.std() * np.sqrt(252))).round(2)
 
-            # Format and show
-            factor_summary_display = factor_summary.round(2)
-            st.dataframe(factor_summary_display.style.format("{:.2f}"))
-        else:
-            st.info("Unable to compute factor summary stats.")
+        factor_stats_df = pd.DataFrame({
+            "Total Return (%)": ann_ret_f,
+            "Annualized Volatility (%)": ann_vol_f,
+            "Sharpe Ratio": sharpe_f
+        })
 
+        # reindex to pretty names
+        factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
+        st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
