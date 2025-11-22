@@ -314,14 +314,14 @@ with left_col:
         if len(numeric_metrics) < 2:
             st.warning("Not enough numeric metrics available to generate scatter plot.")
         else:
-            # Metric selectors (X / Y axis)
+            # Dropdown selectors
             col1, col2 = st.columns(2)
             with col1:
                 x_metric = st.selectbox("Select X-axis Metric", numeric_metrics, index=0)
             with col2:
                 y_metric = st.selectbox("Select Y-axis Metric", numeric_metrics, index=1)
     
-            # Clean data — drop ETFs missing BOTH selected metrics
+            # Drop rows missing both values
             df_clean = df_scatter.dropna(subset=[x_metric, y_metric], how="any")
     
             if df_clean.shape[0] < 2:
@@ -333,13 +333,23 @@ with left_col:
                     y=y_metric,
                     text="ETF",
                     title=f"{x_metric} vs {y_metric}",
-                    size_max=12,
                 )
-                fig.update_traces(textposition="top center")
+    
+                # 🎨 Customize marker color + size
+                fig.update_traces(
+                    marker=dict(
+                        size=30,        # 3x larger
+                        color="plum",   # custom color
+                        opacity=0.85,
+                    ),
+                    textposition="top center"
+                )
+    
                 st.plotly_chart(fig, use_container_width=True)
     
     except Exception as e:
         st.error(f"Error extracting metrics for scatter plot: {e}")
+
 
 
     st.divider()
@@ -401,6 +411,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
