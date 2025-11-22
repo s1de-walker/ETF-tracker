@@ -12,11 +12,13 @@ from matplotlib.colors import LinearSegmentedColormap
 # Make the app widescreen
 st.set_page_config(layout="wide")
 
+st.title("ETF Tracker")
+
 # --- layout columns
 left_col, colmid, right_col = st.columns((1, 0.1, 1))
 
 # Title (top-level, keep visible)
-st.title("ETF Tracker")
+
 st.caption("Track your ETFs")
 st.divider()
 
@@ -234,4 +236,5 @@ with right_col:
             var_95 = daily_returns.quantile(0.05) * 100
             var_df = var_95.loc[selected_tickers].to_frame(name="VaR 95 (%)")
             st.table(var_df.round(2))
+
 
