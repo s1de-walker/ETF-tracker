@@ -314,7 +314,10 @@ with left_col:
         st.error(f"Error computing summary metrics: {e}")
     
     # 3️⃣ show metrics table AFTER leaderboard
-    st.markdown("### Summary Statistics (metrics used for scatter & heatmap)")
+    # =============================
+    #  SUMMARY TABLE (Metrics Table)
+    # =============================
+    st.markdown("### Summary Statistics")
     st.dataframe(metrics_table.round(2).style.format("{:.2f}"), use_container_width=True)
 
         
@@ -322,24 +325,6 @@ with left_col:
     # =============================
     #  SUMMARY TABLE (Metrics Table)
     # =============================
-    
-    st.markdown("### Summary Statistics ")
-    #st.write("metrics used for scatter & heatmap")
-    
-    metrics_table = compute_metrics_table(
-        prices,
-        nifty_series=(nifty_prices.iloc[:, 0] if not nifty_prices.empty else None)
-    )
-    
-    if metrics_table.empty:
-        st.info("Not enough data to compute metrics.")
-    else:
-        st.dataframe(
-            metrics_table.round(2).style.format("{:.2f}"),
-            use_container_width=True
-        )
-    
-    st.divider()
     
     
     # =============================
@@ -494,6 +479,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
