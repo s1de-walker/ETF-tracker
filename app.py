@@ -371,7 +371,7 @@ with left_col:
 # RIGHT COLUMN (fixed factor panel)
 # ----------------------------
 with right_col:
-    st.header("Right — Fixed Factor Panel")
+    st.header("How are the Factors performing?")
 
     # Use same date range
     yf_start_f = start_date.strftime("%Y-%m-%d")
@@ -418,6 +418,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
