@@ -339,7 +339,7 @@ with left_col:
                 fig.update_traces(
                     marker=dict(
                         size=20,        # 3x larger
-                        color="plum",   # custom color
+                        color="#7a384c",   # custom color
                         opacity=0.95,
                     ),
                     textposition="top center"
@@ -411,6 +411,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
