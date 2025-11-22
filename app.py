@@ -303,52 +303,9 @@ with left_col:
     # SCATTER PLOT (bottom of LHS)
     # Selectable metrics (the 4 requested)
     # ------------------------------
-    st.markdown("### Scatter Plot — Choose two metrics to compare (bottom of LHS)")
 
-    metric_names = [
-        "Annualized Return (%)",
-        "Annualized Volatility (%)",
-        f"Rolling Sharpe ({SHARPE_WINDOW}d)",
-        f"Beta vs NIFTYBEES ({BETA_WINDOW}d)"
-    ]
-
-    if metrics_table.empty:
-        st.info("Metrics table unavailable for scatter plot.")
-    else:
-        # metrics_table has rows=metrics, cols=tickers
-        # Build selection
-        colx, coly = st.columns(2)
-        with colx:
-            metric_x = st.selectbox("X metric", metric_names, index=0)
-        with coly:
-            metric_y = st.selectbox("Y metric", metric_names, index=1)
-
-        # extract x and y arrays (ordered by tickers)
-        try:
-            x_vals = metrics_table.loc[metric_x].values.astype(float)
-            y_vals = metrics_table.loc[metric_y].values.astype(float)
-            labels = metrics_table.columns.tolist()
-        except Exception:
-            st.error("Error extracting metrics for scatter plot.")
-            x_vals = np.array([])
-            y_vals = np.array([])
-            labels = []
-
-        if x_vals.size and y_vals.size:
-            fig_sc = px.scatter(
-                x=x_vals,
-                y=y_vals,
-                text=labels,
-                labels={"x": metric_x, "y": metric_y},
-                title=f"{metric_x} vs {metric_y}"
-            )
-            fig_sc.update_traces(textposition="top center", marker=dict(size=10))
-            fig_sc.update_layout(template="plotly_dark", height=480)
-            st.plotly_chart(fig_sc, use_container_width=True)
-        else:
-            st.info("Insufficient data to render scatter plot.")
-
-# ----------------------------
+    
+# ---------------------------
 # RIGHT COLUMN (fixed factor panel)
 # ----------------------------
 with right_col:
@@ -399,6 +356,7 @@ with right_col:
         # reindex to pretty names
         factor_stats_df.index = [FACTOR_MAP.get(i, i) if i in FACTOR_MAP else i for i in factor_stats_df.index]
         st.dataframe(factor_stats_df.round(2).style.format("{:.2f}"), use_container_width=True)
+
 
 
 
