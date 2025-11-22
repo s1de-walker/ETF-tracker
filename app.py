@@ -26,6 +26,9 @@ st.divider()
 
 left_col, right_col = st.columns([1, 1])
 
+if "left_ready" not in st.session_state:
+    st.session_state.left_ready = False
+
 
 with left_col:
     # 📃 Date Selection (Side-by-side)
@@ -227,6 +230,15 @@ with left_col:
             st.dataframe(correlation_matrix.style.format("{:.2f}").background_gradient(cmap=cmap, axis=None, vmin=-1, vmax=1))
 
 
+            # Save everything to SESSION STATE
+            st.session_state.start_date = start
+            st.session_state.end_date = end
+            st.session_state.data = data
+            st.session_state.returns = returns
+            st.session_state.selected = selected
+            st.session_state.left_ready = True
+
+
 
 with colmid:
     st.write("")
@@ -235,6 +247,7 @@ with colmid:
 
 with right_col:
     st.write("")  # blank for now
+
 
 
 
