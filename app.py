@@ -197,7 +197,9 @@ with left_col:
         "OILIETF.NS", "HEALTHIETF.NS", "EVINDIA.NS", "METAL.NS", "AUTOIETF.NS", "MOREALTY.NS",
         "DIVOPPBEES.NS", "LTGILTBEES.NS", "GSEC5IETF.NS", "CPSEETF.NS", "MAKEINDIA.NS", "LIQUIDCASE.NS",
         "LIQUIDBEES.NS", "VYM", "SCHD", "BBUS", "IYF", "VTI", "JGRO", "MTUM", "QUAL", "JCTR", "SPY",
-        "VOO", "USMV", "FEZ", "BBEU", "QGRO", "XMAG", "URTH", "IXC", "IXN", "BOTZ", "VFH", "XLC", "IXUS", "REMX", "ETHB", "SCHF", "ICLN", "QQQ", "VT"
+        "VOO", "USMV", "FEZ", "BBEU", "QGRO", "XMAG", "URTH", "IXC", "IXN", "BOTZ", "VFH", "XLV", "XLC", "IXUS", "REMX", "ETHB", "SCHF", 
+        "ICLN", "QQQ", "VT", "AOR", "IYG", "NZAC"
+        
     ]
     default_tickers = ["MASPTOP50.NS", "NIFTYBEES.NS", "GOLDBEES.NS", "LOWVOLIETF.NS", "MOMOMENTUM.NS", "MOVALUE.NS"]
     selected_tickers = st.multiselect("Select ETFs to analyze", master_tickers, default=default_tickers)
